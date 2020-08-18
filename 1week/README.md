@@ -286,10 +286,259 @@ point.x = 3  // <-- does not compile
 class Point(x: Int, y: Int)
 val point = new Point(1, 2)
 point.x  // <-- does not compile
-
-
 ```
 
+# Defalut Parameter Values
+메소드를 호출하는데 있어서 defalut value를 지정할 수 있다. 파라미터를 넘기는데 있어서 값을 지정하지 않덜다도 자동으로 값이 들어간다.
+
+``` Scala
+def log(message: String, level: String = "INFO") = println(s"$level: $message")
+
+log("System starting")  // prints INFO: System starting
+log("User not found", "WARNING")  // prints WARNING: User not found
+```
+
+하지만 자바 코드에서 실행하는 경우 컴파일이 되지 않는댜.
+
+``` Scala
+// Point.scala
+class Point(val x: Double = 0, val y: Double = 0)
+
+// Main.java
+public class Main {
+    public static void main(String[] args) {
+        Point point = new Point(1);  // does not compile
+    }
+}
+```
+
+# NAMED ARGUMENTS
+``` Scala
+def printName(first: String, last: String): Unit = {
+  println(first + " " + last)
+}
+
+printName("John", "Smith")  // Prints "John Smith"
+printName(first = "John", last = "Smith")  // Prints "John Smith"
+printName(last = "Smith", first = "John")  // Prints "John Smith"
+
+printName(last = "Smith", "john") // error: positional after named argument
+
+```
+파라미터 value에 대해서 넣을 수 있다. 하지만 파라미터에 대해서 명명하여 넣는 경우와 그렇지 않는 경우에 대해서는 반드시 이름이 없는 경우르 먼저 작성해야 한다.
+그리고 자바에서는 동작하지 않는다.
+
+# Traits
+자바의 인터페이스와 비슷한 역할을 합니다. 필드와 함수를 공유함. 인스턴스화 할 수 없고 매개 변수가 없습니다.
+
+## Defining and Using a trait
+
+``` Scala
+trait Iterator[A] {
+  def hasNext: Boolean
+  def next(): A
+}
+
+class IntIterator(to: Int) extends Iterator[Int] {
+  private var current = 0
+  override def hasNext: Boolean = current < to
+  override def next(): Int = {
+    if (hasNext) {
+      val t = current
+      current += 1
+      t
+    } else 0
+  }
+}
+
+
+val iterator = new IntIterator(10)
+iterator.next()  // returns 0
+iterator.next()  // returns 1
+```
+사용하기 위해서 `extends` 키워드와 함수에 대하여 `override` 함수를 사용함.
+타입에 대해서 `Iterator[Int]` 구현하면서 `Int`에 대해서 사용하게 됨.
+
+## Subtyping
+
+``` Scala
+import scala.collection.mutable.ArrayBuffer
+
+trait Pet {
+  val name: String
+}
+
+class Cat(val name: String) extends Pet
+class Dog(val name: String) extends Pet
+
+val dog = new Dog("Harry")
+val cat = new Cat("Sally")
+
+val animals = ArrayBuffer.empty[Pet]
+animals.append(dog)
+animals.append(cat)
+animals.foreach(pet => println(pet.name))  // Prints Harry Sally
+```
+뭔가 신기하게도 클래스를 상속받아서 사용하는 경우도 아닌데 인터페이스를 상속받아서 추상화 개념으로 같이 취급할 수 있는건가? 좋구만ㅎㅎ
+
+# Tuples
+고정되어진 수의 엘레멘트를 가진 밸류. 모든 타입은 명시적이고 value는 mutable하다. tuples는 여러 값을 리턴한다.
+``` Scala
+val ingredient = ("Sugar" , 25)
+
+println(ingredient._1) // Sugar
+println(ingredient._2) // 25
+
+val (name, quantity) = ingredient
+println(name) // Sugar
+println(quantity) // 25
+
+val planets =
+  List(("Mercury", 57.9), ("Venus", 108.2), ("Earth", 149.6),
+       ("Mars", 227.9), ("Jupiter", 778.3))
+planets.foreach{
+  case ("Earth", distance) =>
+    println(s"Our planet is $distance million kilometers from the sun")
+  case _ =>
+}
+
+val numPairs = List((2, 5), (3, -7), (20, 56))
+for ((a, b) <- numPairs) {
+  println(a * b)
+}
+```
+
+# CLASS COMPOSITION WITH MIXINS
+
+``` Scala
+abstract class AbsIterator {
+  type T
+  def hasNext: Boolean
+  def next(): T
+}
+
+class StringIterator(s: String) extends AbsIterator {
+  type T = Char
+  private var i = 0
+  def hasNext = i < s.length
+  def next() = {
+    val ch = s charAt i
+    i += 1
+    ch
+  }
+}
+
+trait RichIterator extends AbsIterator {
+  def foreach(f: T => Unit): Unit = while (hasNext) f(next())
+}
+
+class RichStringIter extends StringIterator("Scala") with RichIterator
+val richStringIter = new RichStringIter
+richStringIter.foreach(println)
+```
+trait와 class에 대해서 서로 섞이고 그것에 대해서 상속받고 진행하면서도 서로 연관적으로 동작하도록 만들 수 있다.
+
+
+# HIGHER-ORDER FUNCTIONS
+높은 순서 함수는 다른 함수에 대한 결과를 활용하여 함수를 만들 수 있다. 왜냐하면, 스칼라 함수는 first-class values이기 때문이다.
+
+대표적으로 `map`이 존재하다.
+
+``` Scala
+val salaries = Seq(20000, 70000, 40000)
+val doubleSalary = (x: Int) => x * 2
+val newSalaries = salaries.map(doubleSalary) // List(40000, 140000, 80000)
+
+// 변수에 대한 타입이 존재하지 않아도 자연스럽게 Currying을 통해서 통작하도록 함.
+val salaries = Seq(20000, 70000, 40000)
+val newSalaries = salaries.map(x => x * 2) // List(40000, 140000, 80000)
+
+// 컴파일러가 미리 파라미터를 아는 경우에 대해서는 밑에 같이도 사용할 수 있음
+val salaries = Seq(20000, 70000, 40000)
+val newSalaries = salaries.map(_ * 2)
+```
+
+## Functions that accept functions
+
+``` Scala
+object SalaryRaiser {
+
+  def smallPromotion(salaries: List[Double]): List[Double] =
+    salaries.map(salary => salary * 1.1)
+
+  def greatPromotion(salaries: List[Double]): List[Double] =
+    salaries.map(salary => salary * math.log(salary))
+
+  def hugePromotion(salaries: List[Double]): List[Double] =
+    salaries.map(salary => salary * salary)
+}
+
+object SalaryRaiser {
+
+  private def promotion(salaries: List[Double], promotionFunction: Double => Double): List[Double] =
+    salaries.map(promotionFunction)
+
+  def smallPromotion(salaries: List[Double]): List[Double] =
+    promotion(salaries, salary => salary * 1.1)
+
+  def greatPromotion(salaries: List[Double]): List[Double] =
+    promotion(salaries, salary => salary * math.log(salary))
+
+  def hugePromotion(salaries: List[Double]): List[Double] =
+    promotion(salaries, salary => salary * salary)
+}
+```
+정확히 어떤 부분이 나아진 것일까요? 공통적으로 움직이는 로직을 함수로 표현해서 동작하도록 한 부분에 대해서는 알겠음.
+
+하지만 이 부분이 정확히 어떤 부분에서 좋은 것이지?
+
+## Functions that return functions
+
+``` Scala
+def urlBuilder(ssl: Boolean, domainName: String): (String, String) => String = {
+  val schema = if (ssl) "https://" else "http://"
+  (endpoint: String, query: String) => s"$schema$domainName/$endpoint?$query"
+}
+
+val domainName = "www.example.com"
+def getURL = urlBuilder(ssl=true, domainName)
+val endpoint = "users"
+val query = "id=1"
+val url = getURL(endpoint, query) // "https://www.example.com/users?id=1": String
+```
+
+`urlBuiler`는 `endpoint`와 `query` 두 개의 스트링을 받은 함수를 리턴함. `(String, String) => String` 
+
+그것에 대한 새로운 함수를 리턴받고 그 함수를 가지고 새로운 형식의 함수를 만들 수 있음.
+
+
+# Nested methods
+
+``` Scala
+ def factorial(x: Int): Int = {
+    def fact(x: Int, accumulator: Int): Int = {
+      if (x <= 1) accumulator
+      else fact(x - 1, x * accumulator)
+    }  
+    fact(x, 1)
+ }
+
+ println("Factorial of 2: " + factorial(2)) // Factorial of 2: 2
+ println("Factorial of 3: " + factorial(3)) // Factorial of 3: 6
+```
+
+
+
+
+
+
+
+``` Scala
+
+```
+``` Scala
+
+```
 ``` Scala
 
 ```
