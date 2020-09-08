@@ -511,6 +511,7 @@ val url = getURL(endpoint, query) // "https://www.example.com/users?id=1": Strin
 
 그것에 대한 새로운 함수를 리턴받고 그 함수를 가지고 새로운 형식의 함수를 만들 수 있음.
 
+---
 
 # Nested methods
 
@@ -526,3 +527,274 @@ val url = getURL(endpoint, query) // "https://www.example.com/users?id=1": Strin
  println("Factorial of 2: " + factorial(2)) // Factorial of 2: 2
  println("Factorial of 3: " + factorial(3)) // Factorial of 3: 6
 ```
+
+# MULTIPLE PARAMETER LISTS (CURRYING)
+여러개의 파라미터를 받을 수 있는 리스트를 만들 수 있다.
+
+#### Curing
+pratial application의 특수한 형태. partial application이 미리 전달받아둘 수 있는 인자의 수에 제한이 없다면 curry는 1개만 가능하다.
+
+``` Scala
+z는 초기값, op는 오퍼레이션. 최종 리턴값은 B 타입
+def foldLeft[B](z: B)(op: (B, A) => B): B
+
+val numbers = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+val res = numbers.foldLeft(0)((m, n) => m + n)
+println(res) // 55
+```
+
+## Use cases (advantage)
+
+### DRIVE TYPE INFERENCE
+하나의 파라미터로 위와 같은 연산을 진행하기 위해서는 A, B에 대해서 명확하게 어떤 타입인지 알려주어야 한다.
+
+하지만, 멀티플 파라미터를 진행하는 경우 A, B에 대해서 타입을 추론할 수 있기 때문에 따로 타입을 적어주지 않더라도 정상적으로 동작한다. (This definition doesn’t need any type hints and can infer all of its type parameters.)
+
+``` Scala
+def foldLeft1[A, B](as: List[A], b0: B, op: (B, A) => B) = ???
+
+def firstWay = foldLeft1[Int, Int](numbers, 0, _ + _)
+def secondWay = foldLeft1(numbers, 0, (a: Int, b: Int) => a + b)
+
+def foldLeft2[A, B](as: List[A], b0: B)(op: (B, A) => B) = ???
+def possible = foldLeft2(numbers, 0)(_ + _)
+```
+
+### IMPLICIT PARAMETERS (명확히 무슨 말인지 모르겠음)
+특정 매개 변수 만 암시 적으로 지정하려면 고유 한 암시 적 매개 변수 목록에 배치해야합니다. 
+
+``` Scala
+def execute(arg: Int)(implicit ec: scala.concurrent.ExecutionContext) = ???
+```
+
+### PARTIAL APPLICATION
+함수 인자의 일부를 미리 전달해 둔 함수를 생성. 함수에서 필요한 복수 인자에 대해서 일부 파라미터에 값을 넣어서 새로운 메소드를 만들고 그것을 활용하는 기법
+``` Scala
+def foldLeft[B](z: B)(op: (B, A) => B): B
+
+val numbers = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+val numberFunc = numbers.foldLeft(List[Int]()) _
+
+val squares = numberFunc((xs, x) => xs :+ x*x)
+println(squares) // List(1, 4, 9, 16, 25, 36, 49, 64, 81, 100)
+
+val cubes = numberFunc((xs, x) => xs :+ x*x*x)
+println(cubes)  // List(1, 8, 27, 64, 125, 216, 343, 512, 729, 1000)
+```
+
+#### ref
+[rhostem blog](https://blog.rhostem.com/posts/2017-04-20-curry-and-partial-application)
+[zerocho](https://www.zerocho.com/category/JavaScript/post/579236d08241b6f43951af18)
+
+# CASE CLASSES
+변하지 않는 데이터를 다루고 모델링 하기에 좋음. 
+
+## Defining a case class
+``` Scala
+case class Book(isbn: String)
+val frankenstein = Book("978-0486282114")
+
+case class Message(sender: String, recipient: String, body: String)
+val message1 = Message("guillaume@quebec.ca", "jorge@catalonia.es", "Ça va ?")
+
+println(message1.sender)  // prints guillaume@quebec.ca
+message1.sender = "travis@washington.us"  // this line does not compile
+```
+인스턴스를 만드는 경우에 `new` 라는 키워드를 사용하지 않고 만든다. 왜냐하면 `apply` 라는 메소드를 기본으로 가지고 있고 이것은 객체 생성자를 관리한다.\
+
+그리고 모든 `public parametels` 에 대해서는 `val`로 선언되기 때문에 재선언은 불가능하다.
+
+## Comparison && Copy
+``` Scala
+case class Message(sender: String, recipient: String, body: String)
+
+val message2 = Message("jorge@catalonia.es", "guillaume@quebec.ca", "Com va?")
+val message3 = Message("jorge@catalonia.es", "guillaume@quebec.ca", "Com va?")
+val messagesAreTheSame = message2 == message3  // true
+
+case class Message(sender: String, recipient: String, body: String)
+val message4 = Message("julien@bretagne.fr", "travis@washington.us", "Me zo o komz gant ma amezeg")
+val message5 = message4.copy(sender = message4.recipient, recipient = "claire@bourgogne.fr")
+message5.sender  // travis@washington.us
+message5.recipient // claire@bourgogne.fr
+message5.body  // "Me zo o komz gant ma amezeg"
+```
+`case class`는 주소로 비교하는 것이 아닌 설계로 인해서 비교하기 때문에 `==` 으로 비교하여도 문제가 되지 않는다.
+
+그리고 `copy`라는 메소드를 활용해서 shallow copy를 할 수 있고 생성자의 값도 바꿀 수가 있다.
+
+# PATTERN MATCHING
+값을 패턴에 따라서 매칭하는 매커니즘이다. 일치한 경우에 대해서 구성 부분을 분해할 수 있다.
+
+`Java`에 존재하는 `switch`문보다 강력하며 `if/else`문 대신 사용할수도 있다.
+
+``` Scala
+def matchTest(x: Int): String = x match {
+  case 1 => "one"
+  case 2 => "two"
+  case _ => "other"
+}
+matchTest(3)  // other
+matchTest(1)  // one
+```
+`match` `case`라는 키워드를 사용해서 Pattern matching을 할 수 있다. 여기서 `String`을 반환받기를 선언해서 사용하기에 `String`을 반환해주는 모습이다.
+
+`_`는 `Int` 값일 때 나머지 모든 경우에 해당 하는 것을 처리할 수 있다.
+
+## Matching on case classes
+``` Scala
+abstract class Notification
+
+case class Email(sender: String, title: String, body: String) extends Notification
+case class SMS(caller: String, message: String) extends Notification
+case class VoiceRecording(contactName: String, link: String) extends Notification
+
+def showNotification(notification: Notification): String = {
+  notification match {
+    case Email(sender, title, _) =>
+      s"You got an email from $sender with title: $title"
+    case SMS(number, message) =>
+      s"You got an SMS from $number! Message: $message"
+    case VoiceRecording(name, link) =>
+      s"You received a Voice Recording from $name! Click the link to hear it: $link"
+  }
+}
+val someSms = SMS("12345", "Are you there?")
+val someVoiceRecording = VoiceRecording("Tom", "voicerecording.org/id/123")
+
+println(showNotification(someSms))  // prints You got an SMS from 12345! Message: Are you there?
+println(showNotification(someVoiceRecording))  // you received a Voice Recording from Tom! Click the link to hear it: voicerecording.org/id/123
+```
+`Notificaion`이라는 클래스를 상속받은 경우에 `match`를 통해서 상속받은 모든 클래스를 조건문처럼 사용할 수 있다. 그리고 `case class` 사용.
+
+## Pattern guards
+``` Scala
+def showImportantNotification(notification: Notification, importantPeopleInfo: Seq[String]): String = {
+  notification match {
+    case Email(sender, _, _) if importantPeopleInfo.contains(sender) =>
+      "You got an email from special someone!"
+    case SMS(number, _) if importantPeopleInfo.contains(number) =>
+      "You got an SMS from special someone!"
+    case other =>
+      showNotification(other) // nothing special, delegate to our original showNotification function
+  }
+}
+
+val importantPeopleInfo = Seq("867-5309", "jenny@gmail.com")
+
+val someSms = SMS("123-4567", "Are you there?")
+val someVoiceRecording = VoiceRecording("Tom", "voicerecording.org/id/123")
+val importantEmail = Email("jenny@gmail.com", "Drinks tonight?", "I'm free after 5!")
+val importantSms = SMS("867-5309", "I'm here! Where are you?")
+
+println(showImportantNotification(someSms, importantPeopleInfo)) //prints You got an SMS from 123-4567! Message: Are you there?
+println(showImportantNotification(someVoiceRecording, importantPeopleInfo)) //prints You received a Voice Recording from Tom! Click the link to hear it: voicerecording.org/id/123
+println(showImportantNotification(importantEmail, importantPeopleInfo)) //prints You got an email from special someone!
+println(showImportantNotification(importantSms, importantPeopleInfo)) //prints You got an SMS from special someone!
+```
+단순히 클래스에 대해서만 비교하는 것이 아닌 `boolean`에 대해서 특별한 경우도 체크할 수 있다.
+
+위와 같은 경우 `if <boolean expression>`를 사용했다.
+
+## Matching on type only
+
+``` Scala
+abstract class Device
+case class Phone(model: String) extends Device {
+  def screenOff = "Turning screen off"
+}
+case class Computer(model: String) extends Device {
+  def screenSaverOn = "Turning screen saver on..."
+}
+
+def goIdle(device: Device) = device match {
+  case p: Phone => p.screenOff
+  case c: Computer => c.screenSaverOn
+}
+```
+해당 부분은 상속받은 `class`에 의존적이지 않고 단순히 함수를 실행해야되는 경우에 유용하다. 그리고 이런 경우 구분할 수 있는 경우 첫번째 letter만을 보고도 사용할 수 있다.
+
+## Sealed classes
+``` Scala
+sealed abstract class Furniture
+case class Couch() extends Furniture
+case class Chair() extends Furniture
+
+def findPlaceToSit(piece: Furniture): String = piece match {
+  case a: Couch => "Lie on the couch"
+  case b: Chair => "Sit on the chair"
+}
+```
+`Sealed classed`라는 것 자체가 `Enum`에 대해서 확장하여 `class`를 관리할 수 있는 친구이다. 
+
+그러다보니 추가적으로 `catch all`에 대해서 신경쓰지 않아도 되는 장점이 있다.
+
+# SINGLETON OBJECTS
+object는 클래쓰인데 명확하게 하나의 인스턴스만 존재한다. 그리고 이것은 레이즈하게 생선된다. lazy val 처럼.
+
+``` Scala
+package logging
+
+object Logger {
+  def info(message: String): Unit = println(s"INFO: $message")
+}import logging.Logger.info
+
+class Project(name: String, daysToComplete: Int)
+
+class Test {
+  val project1 = new Project("TPS Reports", 1)
+  val project2 = new Project("Website redesign", 5)
+  info("Created projects")  // Prints "INFO: Created projects"
+}
+```
+위에 보이는 예제처럼 하나의 객체를 한번 생성하고 다양하게 사용하는 경우에 좋은 이득을 볼 수 있다.
+
+해당 객체를 가져올 때는 반드시 안정적인 경로가 필요하다.
+
+## Companion objects
+Object와 같은 이름의 클래스가 존재하는 경우 `companion object`라고 말한다. 이 경우에 private method, value를 사용할 수 있다.
+
+``` Scala
+import scala.math._
+
+case class Circle(radius: Double) {
+  import Circle._
+  def area: Double = calculateArea(radius)
+}
+
+object Circle {
+  private def calculateArea(radius: Double): Double = Pi * pow(radius, 2.0)
+}
+
+val circle1 = Circle(5.0)
+
+circle1.area
+```
+The `class Circle` has a member area which is specific **to each instance**, and the singleton `object Circle` has a method `calculateArea` which is available **to every instance**.
+
+``` Scala
+class Email(val username: String, val domainName: String)
+
+object Email {
+  def fromString(emailString: String): Option[Email] = {
+    emailString.split('@') match {
+      case Array(a, b) => Some(new Email(a, b))
+      case _ => None
+    }
+  }
+}
+
+val scalaCenterEmail = Email.fromString("scala.center@epfl.ch")
+scalaCenterEmail match {
+  case Some(email) => println(
+    s"""Registered an email
+       |Username: ${email.username}
+       |Domain name: ${email.domainName}
+     """.stripMargin)
+  case None => println("Error: could not parse email")
+}
+```
+위에 모습처럼 팩토리 메소드를 활용해서 인스턴스를 만들도록 활용할 수도 있다.
+
+## Notes for Java programmers
+`object`는 자바로 바뀌면서 `static`을 활용해서 사용되어 질 수 있다. **static forwarding** 라는 이름으로 불린다.
