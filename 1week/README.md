@@ -526,22 +526,3 @@ val url = getURL(endpoint, query) // "https://www.example.com/users?id=1": Strin
  println("Factorial of 2: " + factorial(2)) // Factorial of 2: 2
  println("Factorial of 3: " + factorial(3)) // Factorial of 3: 6
 ```
-
-
-
-
-
-
-
-``` Scala
-
-```
-``` Scala
-
-```
-``` Scala
-
-```
-``` Scala
-
-```
