@@ -600,9 +600,9 @@ val message1 = Message("guillaume@quebec.ca", "jorge@catalonia.es", "Ça va ?")
 println(message1.sender)  // prints guillaume@quebec.ca
 message1.sender = "travis@washington.us"  // this line does not compile
 ```
-인스턴스를 만드는 경우에 `new` 라는 키워드를 사용하지 않고 만든다. 왜냐하면 `apply` 라는 메소드를 기본으로 가지고 있고 이것은 객체 생성자를 관리한다.\
+인스턴스를 만드는 경우에 `new` 라는 키워드를 사용하지 않고 만든다. 왜냐하면 `apply` 라는 메소드를 기본으로 가지고 있고 이것은 객체 생성자를 관리한다.
 
-그리고 모든 `public parametels` 에 대해서는 `val`로 선언되기 때문에 재선언은 불가능하다.
+그리고 모든 `public parameters` 에 대해서는 `val`로 선언되기 때문에 재선언은 불가능하다.
 
 ## Comparison && Copy
 ``` Scala
